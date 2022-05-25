@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<form class="row g-3 p-4 needs-validation" novalidate >
+    <div class="col-md-12">
+        <input type="file" multiple>
+    </div>
+    <div class="col-md-4">
+        <label for="firstName" class="form-label">Imię</label>
+        <input type="text" class="form-control" id="firstName" required>
+        <div class="invalid-feedback" role="alert">
+            Wprowadź imię
+        </div>
+    </div>
+    <div class="col-md-8">
+        <label for="lastName" class="form-label">Nazwisko</label>
+        <input type="text" class="form-control" id="lastName" required>
+        <div class="invalid-feedback" role="alert">
+            Wprowadź nazwisko
+        </div>
+    </div>
+    <div class="col-md-6">
+        <label for="email" class="form-label">Adres email</label>
+        <input type="email" class="form-control" id="email" required>
+        <div class="invalid-feedback" role="alert">
+            Wprowadź adres email
+        </div>
+    </div>
+    <div class="col-md-6">
+        <label for="telephoneNumber" class="form-label">Numer telefonu</label>
+        <input type="text" class="form-control" id="telephoneNumber" required>
+        <div class="invalid-feedback" role="alert">
+            Wprowadź numer telefonu
+        </div>
+    </div>
+    <div class="col-md-12">
+        <label for="description" class="form-label">Treść wiadomości</label>
+        <textarea class="form-control" id="description" required></textarea>
+        <div class="invalid-feedback" role="alert">
+            Wprowadź tekst wiadomości
+        </div>
+    </div>
+    <div class="col-12">
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="invalidCheck" required>
+            <label class="form-check-label" for="invalidCheck">
+                Zapoznałem się z Regulaminem oraz polityką prywatności i plików cookies i je akceptuję
+            </label>
+            <div class="invalid-feedback" role="alert">
+                Prosimy o zaakceptowanie regulaminu. To konieczne, byś mógł wysłać nam swje pliki do wyceny
+            </div>
+        </div>
+    </div>
+    <div class="col-12">
+        <button class="btn btn-primary" id="saveBtn" type="submit">Wyślij pliki do wyceny</button>
+    </div>
+</form>
+
+<script>
+
+    var files = [];
+    document.addEventListener('DOMContentLoaded', function () {
+        FilePond.registerPlugin(FilePondPluginFileValidateSize);
+        FilePond.registerPlugin(FilePondPluginFileValidateType);
+        FilePond.setOptions({
+            allowMultiple: true,
+            maxFiles: 10,
+            maxFileSize: '3MB'
+        })
+        const inputElement = document.querySelector('input[type="file"]');
+        const pond = FilePond.create(inputElement, {
+            labelIdle: `Upuść pliki lub <span class="filepond--label-action">Wybierz</span>. 3 MB Maksymalny rozmiar pliku`,
+            acceptedFileTypes: ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+            onaddfile: (err, fileItem) => {
+                if (!err) {
+                    files.push(fileItem.file);
+                }
+            },
+            onremovefile: (err, fileItem) => {
+                const index = files.indexOf(fileItem.file);
+                if (index > -1) {
+                    files.splice(index, 1);
+                }
+            }
+        });
+    });
+
+    (function () {
+        'use strict'
+        var forms = document.querySelectorAll('.needs-validation');
+        Array.prototype.slice.call(forms)
+            .forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (!form.checkValidity() || parseInt(files.length) === 0) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    } else {
+                        event.preventDefault();
+
+                        var formData = new FormData();
+                        formData.append('length', files.length);
+                        formData.append('first_name', $('#firstName').val());
+                        formData.append('last_name', $('#lastName').val());
+                        formData.append('email_address', $('#email').val());
+                        formData.append('telephone_number', $('#telephoneNumber').val());
+                        formData.append('description', $('#description').val());
+                        for (var i = 0; i < files.length; i++) {
+                            formData.append('documents' + i, files[i]);
+                        }
+                        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}')
+                        console.log("aaa");
+                        $.ajax({
+                            type: 'POST',
+                            url: '{% url "create-order" %}',
+                            data: formData,
+                            cache: false,
+                            processData: false,
+                            contentType: false,
+                            enctype: 'multipart/form-data',
+                            success: function () {
+                                window.location.href = "/";
+                                alert('Nastąpiło pomyślne przesłanie plików do wyceny');
+                            },
+                            error: function (xhr, errmsg, err) {
+                                console.log(xhr.status + ":" + xhr.responseText);
+                            }
+                        })
+                    }
+                    form.classList.add('was-validated');
+                }, false)
+            })
+    })()
+</script>
+{% endblock %}
